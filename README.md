@@ -14,7 +14,7 @@ The requirements are
 
 
 # Clean Code - View layer
-The view ([LoginActivity](src/main/java/rxviewmodel/example/login/ui/LoginActivity.kt)) is super clean. It only does two things.
+The view ([LoginActivity](app/src/main/java/rxviewmodel/example/login/ui/login/LoginActivity.kt)) is super clean. It only does two things.
 - Render the Live Data (coming from RxJava Observable) in the ViewModel
 - Tell ViewModel to execute actions
 
@@ -22,9 +22,9 @@ There is no any logic in the view.
 
 # Clean code - ViewModel
 The main idea of the RxViewModel is **Action**, **State** and **ViewModel**.
-- We have [three Actions](src/main/java/rxviewmodel/example/login/viewmodel/LoginAction.kt) in this simple app. They are SetUsername, SetPassword and Login.
-- The [State](src/main/java/rxviewmodel/example/login/viewmodel/LoginState.kt) represent the data of the ViewModel. 
-- The ([LoginViewModel](src/main/java/rxviewmodel/example/login/viewmodel/LoginViewModel.kt)) is the core. It generate a next State based on action and current state. ViewModel also reveals the LiveData for View to render. And those LiveData are coming form the RxJava observables that RxViewMode provides.
+- We have [three Actions](app/src/main/java/rxviewmodel/example/login/viewmodel/LoginAction.kt) in this simple app. They are SetUsername, SetPassword and Login.
+- The [State](app/src/main/java/rxviewmodel/example/login/viewmodel/LoginState.kt) represent the data of the ViewModel. 
+- The ([LoginViewModel](app/src/main/java/rxviewmodel/example/login/viewmodel/LoginViewModel.kt)) is the core. It generate a next State based on action and current state. ViewModel also reveals the LiveData for View to render. And those LiveData are coming form the RxJava observables that RxViewMode provides.
 
 
 # The RxJava observables that RxViewModel provides
