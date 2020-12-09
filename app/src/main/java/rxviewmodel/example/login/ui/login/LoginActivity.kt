@@ -1,129 +1,114 @@
 package rxviewmodel.example.login.ui.login
 
-import android.app.Activity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import android.content.Context
 import android.os.Bundle
-import androidx.annotation.StringRes
-import androidx.appcompat.app.AppCompatActivity
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
-import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.Toast
-
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.ViewModelProvider
 import rxviewmodel.example.login.R
+import rxviewmodel.example.login.viewmodel.LoginAction.*
+import rxviewmodel.example.login.viewmodel.LoginViewModel
+import semap.rx.viewmodel.ActionExecutionMode
+import semap.rx.viewmodel.asLiveData
+import semap.rx.viewmodel.observe
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity: AppCompatActivity() {
 
-    private lateinit var loginViewModel: LoginViewModel
+    private lateinit var signInButton: Button
+    private lateinit var username: EditText
+    private lateinit var password: EditText
+    private lateinit var loginProgress: View
+    private lateinit var loginForm: View
+
+    private val viewModel: LoginViewModel by lazy {
+        val viewModelProvider = ViewModelProvider(this, ViewModelProvider.NewInstanceFactory())
+        viewModelProvider.get(LoginViewModel::class.java)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_login)
 
-        val username = findViewById<EditText>(R.id.username)
-        val password = findViewById<EditText>(R.id.password)
-        val login = findViewById<Button>(R.id.login)
-        val loading = findViewById<ProgressBar>(R.id.loading)
+        username = findViewById(R.id.username)
+        password = findViewById(R.id.password)
+        signInButton = findViewById(R.id.signInButton)
+        loginProgress = findViewById<View>(R.id.loginProgress)
+        loginForm = findViewById<View>(R.id.loginForm)
 
-        loginViewModel = ViewModelProvider(this, LoginViewModelFactory())
-                .get(LoginViewModel::class.java)
+        // bind the LiveData in the ViewModel to the views.
+        bindViewModelToView()
+        // bind users inputs to the data in the ViewModel
+        bindViewToViewModel()
+    }
 
-        loginViewModel.loginFormState.observe(this@LoginActivity, Observer {
-            val loginState = it ?: return@Observer
+    private fun bindViewToViewModel() {
 
-            // disable login button unless both username / password is valid
-            login.isEnabled = loginState.isDataValid
-
-            if (loginState.usernameError != null) {
-                username.error = getString(loginState.usernameError)
+        username.doAfterTextChanged {
+            if (it != null) {
+                viewModel.execute(SetUsername(it.toString()))
             }
-            if (loginState.passwordError != null) {
-                password.error = getString(loginState.passwordError)
-            }
-        })
-
-        loginViewModel.loginResult.observe(this@LoginActivity, Observer {
-            val loginResult = it ?: return@Observer
-
-            loading.visibility = View.GONE
-            if (loginResult.error != null) {
-                showLoginFailed(loginResult.error)
-            }
-            if (loginResult.success != null) {
-                updateUiWithUser(loginResult.success)
-            }
-            setResult(Activity.RESULT_OK)
-
-            //Complete and destroy login activity once successful
-            finish()
-        })
-
-        username.afterTextChanged {
-            loginViewModel.loginDataChanged(
-                    username.text.toString(),
-                    password.text.toString()
-            )
         }
 
-        password.apply {
-            afterTextChanged {
-                loginViewModel.loginDataChanged(
-                        username.text.toString(),
-                        password.text.toString()
-                )
+        password.doAfterTextChanged {
+            if (it != null) {
+                viewModel.execute(SetPassword(it.toString()))
             }
+        }
 
-            setOnEditorActionListener { _, actionId, _ ->
-                when (actionId) {
-                    EditorInfo.IME_ACTION_DONE ->
-                        loginViewModel.login(
-                                username.text.toString(),
-                                password.text.toString()
-                        )
-                }
-                false
-            }
-
-            login.setOnClickListener {
-                loading.visibility = View.VISIBLE
-                loginViewModel.login(username.text.toString(), password.text.toString())
-            }
+        signInButton.setOnClickListener {
+            // By default, all the actions are executed in parallel.
+            // And we want the Login action to be executed after all the previous actions ( SetUsername and SetPassword) are done (state is updated).
+            // So we make Login action to be executed in ParallelDefer mode.
+            viewModel.execute(Login, ActionExecutionMode.ParallelDefer)
+            closeKeyboard()
         }
     }
 
-    private fun updateUiWithUser(model: LoggedInUserView) {
-        val welcome = getString(R.string.welcome)
-        val displayName = model.displayName
-        // TODO : initiate successful logged in experience
-        Toast.makeText(
-                applicationContext,
-                "$welcome $displayName",
-                Toast.LENGTH_LONG
-        ).show()
+    private fun bindViewModelToView() {
+        viewModel.isLoading
+                .observe(this, ::showProgress)
+
+        viewModel.isFormValid
+                .observe(this, signInButton::setEnabled)
+
+        viewModel.errorObservable
+                .asLiveData(viewModel)
+                .observe(this, ::showError)
+
+        viewModel.loginAction
+                .observe(this) { showLoginStatus() }
     }
 
-    private fun showLoginFailed(@StringRes errorString: Int) {
-        Toast.makeText(applicationContext, errorString, Toast.LENGTH_SHORT).show()
+    private fun showProgress(show: Boolean) {
+        loginProgress.visibility = if (show) View.VISIBLE else View.GONE
+        loginForm.visibility = if (show) View.GONE else View.VISIBLE
     }
-}
 
-/**
- * Extension function to simplify setting an afterTextChanged action to EditText components.
- */
-fun EditText.afterTextChanged(afterTextChanged: (String) -> Unit) {
-    this.addTextChangedListener(object : TextWatcher {
-        override fun afterTextChanged(editable: Editable?) {
-            afterTextChanged.invoke(editable.toString())
+    private fun showLoginStatus() {
+        Toast.makeText(this, R.string.sign_in_successfully, Toast.LENGTH_LONG).show()
+    }
+
+    private fun showError(throwable: Throwable) {
+        AlertDialog.Builder(this)
+                .setTitle(R.string.error_login_failed_title)
+                .setMessage(throwable.message)
+                .setPositiveButton(android.R.string.yes, null)
+                .setNegativeButton(android.R.string.no, null)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show()
+    }
+
+    private fun closeKeyboard() {
+        val view = this.currentFocus
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+        if (view != null && imm != null) {
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
-
-        override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
-
-        override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
-    })
+    }
 }
