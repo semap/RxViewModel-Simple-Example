@@ -47,8 +47,8 @@ class LoginActivity: AppCompatActivity() {
         bindViewToViewModel()
     }
 
+    // Execute actions based on users interactions
     private fun bindViewToViewModel() {
-
         username.doAfterTextChanged {
             if (it != null) {
                 viewModel.execute(SetUsername(it.toString()))
@@ -70,6 +70,9 @@ class LoginActivity: AppCompatActivity() {
         }
     }
 
+    // Rendering the data coming from ViewModel.
+    // For example, viewModel.isLoading tells the View to show/hide the spinner. View does not know why it is shown/hidden
+    // viewModel.isFormValid tells the View to enable/disable the login button. View does not know why it is enabled/disabled.
     private fun bindViewModelToView() {
         viewModel.isLoading
                 .observe(this, ::showProgress)
@@ -77,21 +80,20 @@ class LoginActivity: AppCompatActivity() {
         viewModel.isFormValid
                 .observe(this, signInButton::setEnabled)
 
-        viewModel.errorObservable
-                .asLiveData(viewModel)
+        // viewModel.error emits an item whenever there is an exception
+        viewModel.error
                 .observe(this, ::showError)
 
-        viewModel.loginAction
-                .observe(this) { showLoginStatus() }
+        // viewModel.loginActionComplete emits an item when Login action is executed successfully
+        viewModel.loginActionComplete
+                .observe(this) {
+                    Toast.makeText(this, R.string.sign_in_successfully, Toast.LENGTH_LONG).show()
+                }
     }
 
     private fun showProgress(show: Boolean) {
         loginProgress.visibility = if (show) View.VISIBLE else View.GONE
         loginForm.visibility = if (show) View.GONE else View.VISIBLE
-    }
-
-    private fun showLoginStatus() {
-        Toast.makeText(this, R.string.sign_in_successfully, Toast.LENGTH_LONG).show()
     }
 
     private fun showError(throwable: Throwable) {
@@ -105,10 +107,9 @@ class LoginActivity: AppCompatActivity() {
     }
 
     private fun closeKeyboard() {
-        val view = this.currentFocus
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-        if (view != null && imm != null) {
-            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        currentFocus?.apply {
+            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?)
+                ?.hideSoftInputFromWindow(windowToken, 0)
         }
     }
 }

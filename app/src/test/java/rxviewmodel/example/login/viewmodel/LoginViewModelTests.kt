@@ -29,7 +29,7 @@ class LoginViewModelTests {
     fun setUsername() {
         val viewModel = createViewModel()
         val stateObserver = viewModel.stateObservable.test()
-        val errObserver = viewModel.errorObservable.test()
+        val errObserver = viewModel.error.test()
 
         viewModel.execute(SetUsername("Jennifer"))
 
@@ -44,7 +44,7 @@ class LoginViewModelTests {
     fun setPassword() {
         val viewModel = createViewModel()
         val stateObserver = viewModel.stateObservable.test()
-        val errObserver = viewModel.errorObservable.test()
+        val errObserver = viewModel.error.test()
 
         viewModel.execute(SetUsername("st@yHome"))
 
@@ -81,9 +81,9 @@ class LoginViewModelTests {
                 .thenReturn(Observable.just(mockToken))
 
         val stateObserver = viewModel.stateObservable.test()
-        val errObserver = viewModel.errorObservable.test()
+        val errObserver = viewModel.error.test()
         val loadingObserver = viewModel.isLoading.test()
-        val loginActionObserver = viewModel.loginAction.test()
+        val loginActionObserver = viewModel.loginActionComplete.test()
 
         viewModel.execute(SetUsername("joseph"))
 
@@ -112,7 +112,7 @@ class LoginViewModelTests {
                 .thenReturn(Observable.error(Exception(errMsg)))
 
         val stateObserver = viewModel.stateObservable.test()
-        val errObserver = viewModel.errorObservable.test()
+        val errObserver = viewModel.error.test()
 
         viewModel.execute(SetUsername("joseph"))
 
